@@ -1,6 +1,7 @@
 package com.android.plugins;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -35,7 +36,8 @@ public class Permissions extends CordovaPlugin {
     private CallbackContext permissionsCallback;
 
     @Override
-    public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext)
+            throws JSONException {
         if (ACTION_CHECK_PERMISSION.equals(action)) {
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
@@ -64,14 +66,15 @@ public class Permissions extends CordovaPlugin {
     }
 
     @Override
-    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults)
+            throws JSONException {
         if (permissionsCallback == null) {
             return;
         }
 
         JSONObject returnObj = new JSONObject();
         if (permissions != null && permissions.length > 0) {
-            //Call checkPermission again to verify
+            // Call checkPermission again to verify
             boolean hasAllPermissions = hasAllPermissions(permissions);
             addProperty(returnObj, KEY_RESULT_PERMISSION, hasAllPermissions);
             permissionsCallback.success(returnObj);
@@ -92,6 +95,11 @@ public class Permissions extends CordovaPlugin {
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             JSONObject returnObj = new JSONObject();
             addProperty(returnObj, KEY_RESULT_PERMISSION, true);
+            callbackContext.success(returnObj);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            JSONObject returnObj = new JSONObject();
+            addProperty(returnObj, KEY_RESULT_PERMISSION, ((AlarmManager) this.cordova.getActivity()
+                    .getApplicationContext().getSystemService(Context.ALARM_SERVICE)).canScheduleExactAlarms());
             callbackContext.success(returnObj);
         } else {
             String permission0;
@@ -132,6 +140,29 @@ public class Permissions extends CordovaPlugin {
         } else {
             permissionsCallback = callbackContext;
             String[] permissionArray = getPermissions(permissions);
+
+            try {
+                if (permissionArray.length == 1 && "android.permission.SCHEDULE_EXACT_ALARM".equals(permissionArray[0])
+                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        && !((AlarmManager) this.cordova.getActivity().getApplicationContext()
+                                .getSystemService(Context.ALARM_SERVICE))
+                                .canScheduleExactAlarms()) {
+                    System.out.println("me de a permissÃ£o");
+                    Activity activity = this.cordova.getActivity();
+                    // AlarmManager alarmMgr =
+                    // this.cordova.getActivity().getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+                    Intent intent = new Intent();
+                    intent.setAction(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    intent.setData(Uri.parse("package:" + activity.getPackageName()));
+                    this.cordova.getActivity().startActivity(intent);
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Receba a inteligence");
+                System.out.println(e);
+            }
+
             if (permissionArray.length == 1 && "android.permission.SYSTEM_ALERT_WINDOW".equals(permissionArray[0])) {
                 Log.i(TAG, "Request permission SYSTEM_ALERT_WINDOW");
 
@@ -159,7 +190,7 @@ public class Permissions extends CordovaPlugin {
             try {
                 stringArray[i] = permissions.getString(i);
             } catch (JSONException ignored) {
-                //Believe exception only occurs when adding duplicate keys, so just ignore it
+                // Believe exception only occurs when adding duplicate keys, so just ignore it
             }
         }
         return stringArray;
@@ -172,7 +203,14 @@ public class Permissions extends CordovaPlugin {
     private boolean hasAllPermissions(String[] permissions) throws JSONException {
 
         for (String permission : permissions) {
-            if(!cordova.hasPermission(permission)) {
+            if ("android.permission.SCHEDULE_EXACT_ALARM".equals(permission)
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    && ((AlarmManager) this.cordova.getActivity().getApplicationContext()
+                            .getSystemService(Context.ALARM_SERVICE))
+                            .canScheduleExactAlarms()) {
+                continue;
+            }
+            if (!cordova.hasPermission(permission)) {
                 return false;
             }
         }
@@ -188,7 +226,7 @@ public class Permissions extends CordovaPlugin {
                 obj.put(key, value);
             }
         } catch (JSONException ignored) {
-            //Believe exception only occurs when adding duplicate keys, so just ignore it
+            // Believe exception only occurs when adding duplicate keys, so just ignore it
         }
     }
 }
