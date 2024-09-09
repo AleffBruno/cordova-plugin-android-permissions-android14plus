@@ -11,7 +11,16 @@ but Cordova developers can work around this problem by using this permissions pl
 
 As a convenience we support browser and iOS platforms as well, but this permissions plugin will simply reply that any permission checked or requested was granted.
 
-Installation
+SCHEDULE_EXACT_ALARM FIXED Installation 
+--------
+
+```bash
+cordova plugin add https://github.com/AleffBruno/cordova-plugin-android-permissions-android14plus.git --save --noregistery
+
+```
+
+
+OLD Installation
 --------
 
 ```bash
