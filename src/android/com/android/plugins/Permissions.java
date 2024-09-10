@@ -205,10 +205,10 @@ public class Permissions extends CordovaPlugin {
         for (String permission : permissions) {
             if ("android.permission.SCHEDULE_EXACT_ALARM".equals(permission)
                     && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    && ((AlarmManager) this.cordova.getActivity().getApplicationContext()
+                    && !((AlarmManager) this.cordova.getActivity().getApplicationContext()
                             .getSystemService(Context.ALARM_SERVICE))
                             .canScheduleExactAlarms()) {
-                continue;
+                return false;
             }
             if (!cordova.hasPermission(permission)) {
                 return false;
